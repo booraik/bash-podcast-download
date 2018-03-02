@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 # 
 #
 # Description: A simple bash script to download all media from a podcast XML feed
@@ -38,6 +38,13 @@ else
 	mkdir $FOLDER
 fi 
 
+# Check package
+if ! type "xpath" > /dev/null; then
+	yum install perl-XML-XPath -y
+fi
+if ! type "curl" > /dev/null; then
+	yum install curl -y
+fi
 
 STARTTIME=`date +%s`
 
@@ -47,14 +54,17 @@ MEDIA=$(curl -s $FEED | xpath '/rss/channel/item/enclosure/@url' 2>/dev/null | e
 
 
 # Loop through and download file if not already downloaded
+cnt=1
 while IFS= read -r URL
 do
-
+ 	echo --- $cnt ---th download
 	# Find the last part of the url using the / as delimiter
 	AFTER_SLASH=${URL##*/}
 
 	# Remove any additional query params in the filename by removing everything after ?
-	FILE_NAME=${AFTER_SLASH%%\?*}
+	EXT=$(echo $URL |awk -F . '{if (NF>1) {print $NF}}')
+	FILE_NAME=$(curl -s $FEED | xpath '/rss/channel/item['$cnt']/title' 2>/dev/null | sed -n -e 's/.*<title>\(.*\)<\/title>.*/\1/p' )
+	FILE_NAME=$FILE_NAME'.'$EXT
 
 	DATE=$(date)
 
@@ -62,10 +72,13 @@ do
 	if [ -f $FOLDER/$FILE_NAME ]; then
 		echo "Exsists $URL $FOLDER/$FILE_NAME $FILE_NAME $DATE"
 	else 
-		echo "Download $URL $FOLDER/$FILE_NAME $FILE_NAME $DATE"
+		echo URL : $URL
+		echo FOLDER : $FOLDER
+		echo FILE_NAME : $FILE_NAME
 		curl -s -L $URL > $FOLDER/$FILE_NAME
+		curl -s -L $URL > $FOLDER'/'$FILE_NAME
 	fi 
-
+	cnt=$(($cnt+1))
 done <<< "$MEDIA"
 
 ENDTIME=`date +%s`
