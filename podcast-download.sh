@@ -40,6 +40,13 @@ else
 	mkdir $FOLDER
 fi 
 
+# Check package
+if ! type "xpath" > /dev/null; then
+	yum install perl-XML-XPath -y
+fi
+if ! type "curl" > /dev/null; then
+	yum install curl -y
+fi
 
 STARTTIME=`date +%s`
 
