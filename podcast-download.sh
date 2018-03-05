@@ -13,17 +13,17 @@
 
 # Optional Variables
 # You can hardcode the feed and url variables here to avoid sending them when envoking the script
-#FEED='' # URL TO THE RSS FEED
-FEED='http://api.podty.me/api/v1/share/cast/390937d3e5c758aa6f4005b63542cc83695b4d5e6925fe6a2d4d488d1d05d748/146364 ' # URL TO THE RSS FEED
-#FOLDER='' # RELATIVE PATH OF FOLDER TO DOWNLOAD FILES TO
-FOLDER='/home/media/podcasts/지대넓얕/' # RELATIVE PATH OF FOLDER TO DOWNLOAD FILES TO
+# 지대넓얕 : http://api.podty.me/api/v1/share/cast/390937d3e5c758aa6f4005b63542cc83695b4d5e6925fe6a2d4d488d1d05d748/146364
+# 나는 꼼수다 : http://old.ddanzi.com/appstream/ddradio.xml
+FEED='' # URL TO THE RSS FEED
+FOLDER='' # RELATIVE PATH OF FOLDER TO DOWNLOAD FILES TO
 
 RSSFILE=.tmp.rss
 wget $FEED --output-document $RSSFILE
 
 # Override hardcoded feeds with passed variables
-#[ -n "$1" ] && FEED=$1
-#[ -n "$2" ] && FOLDER=$2
+[ -n "$1" ] && FEED=$1
+[ -n "$2" ] && FOLDER=$2
 
 # Check if feed is empty
 if [ -z "$FEED" ]; then
@@ -36,11 +36,11 @@ if [ -z "$FOLDER" ]; then
 fi
 
 # Create destination folder if it doesn't exsist
-if [ -d $FOLDER ]; then
+if [ -d "$FOLDER" ]; then
 	echo "$FOLDER exists"
 else 
 	echo "Creating directory $FOLDER"
-	mkdir $FOLDER
+	mkdir "$FOLDER"
 fi 
 
 # Check package
