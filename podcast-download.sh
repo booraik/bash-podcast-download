@@ -18,6 +18,9 @@ FEED='http://api.podty.me/api/v1/share/cast/390937d3e5c758aa6f4005b63542cc83695b
 #FOLDER='' # RELATIVE PATH OF FOLDER TO DOWNLOAD FILES TO
 FOLDER='/home/media/podcasts/지대넓얕/' # RELATIVE PATH OF FOLDER TO DOWNLOAD FILES TO
 
+RSSFILE=.tmp.rss
+wget $FEED --output-document $RSSFILE
+
 # Override hardcoded feeds with passed variables
 #[ -n "$1" ] && FEED=$1
 #[ -n "$2" ] && FOLDER=$2
@@ -47,13 +50,14 @@ fi
 if ! type "curl" > /dev/null; then
 	yum install curl -y
 fi
+if ! type "wget" > /dev/null; then
+	yum install wget -y
+fi
 
 STARTTIME=`date +%s`
 
-
 # Get the full XML feed | extract the enclosure url attribute | extract the url
-MEDIA=$(curl -s $FEED | xpath '/rss/channel/item/enclosure/@url' 2>/dev/null | egrep -o 'https?://[^"<]+' )
-
+MEDIA=$(cat $RSSFILE | xpath '/rss/channel/item/enclosure/@url' 2>/dev/null | egrep -o 'https?://[^"<]+' )
 
 # Loop through and download file if not already downloaded
 cnt=1
@@ -65,22 +69,25 @@ do
 
 	# Remove any additional query params in the filename by removing everything after ?
     #FILE_NAME=${AFTER_SLASH%%\?*}
-
     EXT=$(echo $URL |awk -F . '{if (NF>1) {print $NF}}')
-    FILE_NAME=$(curl -s $FEED | xpath '/rss/channel/item['$cnt']/title' 2>/dev/null | sed -n -e 's/.*<title>\(.*\)<\/title>.*/\1/p' )
-    FILE_NAME=$FILE_NAME'.'$EXT
+    PREFIX=$(cat $RSSFILE | xpath '/rss/channel/item['$cnt']/pubDate' 2>/dev/null | sed -n -e 's/.*<pubDate>\(.*\)<\/pubDate>.*/\1/p' )
+    PREFIX=`date -d "$PREFIX" "+%Y%m%d"`
+    TITLE=$(cat $RSSFILE | xpath '/rss/channel/item['$cnt']/title' 2>/dev/null | sed -n -e 's/.*<title>\(.*\)<\/title>.*/\1/p' )
+    TITLE=$(echo $TITLE |  sed 's/[?<>\\:*|\"\/]/_/g')
+    
+    FILE_NAME=$PREFIX'_'$TITLE'.'$EXT
 
     DATE=$(date)
     echo DATE : $DATE
 
 	# If file as already been downloaded ignore
-	if [ -f $FOLDER/$FILE_NAME ]; then
-		echo "Exsists $URL $FOLDER/$FILE_NAME $FILE_NAME $DATE"
+	if [ -f "$FOLDER/$FILE_NAME" ]; then
+		echo "$FOLDER/$FILE_NAME already exists"
 	else 
         echo URL : $URL
         echo FOLDER : $FOLDER
         echo FILE_NAME : $FILE_NAME
-        curl -s -L $URL > $FOLDER'/'$FILE_NAME
+        curl -s -L $URL > "$FOLDER/$FILE_NAME"
         #echo "Download $URL $FOLDER/$FILE_NAME $FILE_NAME $DATE"
         #curl -s -L $URL > $FOLDER/$FILE_NAME
 	fi 
@@ -88,4 +95,6 @@ do
 done <<< "$MEDIA"
 
 ENDTIME=`date +%s`
+rm $RSSFILE
 echo Finished total time `expr $ENDTIME - $STARTTIME`s.
+
