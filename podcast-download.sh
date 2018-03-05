@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 # 
 #
 # Description: A simple bash script to download all media from a podcast XML feed
@@ -13,12 +13,14 @@
 
 # Optional Variables
 # You can hardcode the feed and url variables here to avoid sending them when envoking the script
-FEED='' # URL TO THE RSS FEED
-FOLDER='' # RELATIVE PATH OF FOLDER TO DOWNLOAD FILES TO
+#FEED='' # URL TO THE RSS FEED
+FEED='http://api.podty.me/api/v1/share/cast/390937d3e5c758aa6f4005b63542cc83695b4d5e6925fe6a2d4d488d1d05d748/146364 ' # URL TO THE RSS FEED
+#FOLDER='' # RELATIVE PATH OF FOLDER TO DOWNLOAD FILES TO
+FOLDER='/home/media/podcasts/지대넓얕/' # RELATIVE PATH OF FOLDER TO DOWNLOAD FILES TO
 
 # Override hardcoded feeds with passed variables
-[ -n "$1" ] && FEED=$1
-[ -n "$2" ] && FOLDER=$2
+#[ -n "$1" ] && FEED=$1
+#[ -n "$2" ] && FOLDER=$2
 
 # Check if feed is empty
 if [ -z "$FEED" ]; then
@@ -47,25 +49,35 @@ MEDIA=$(curl -s $FEED | xpath '/rss/channel/item/enclosure/@url' 2>/dev/null | e
 
 
 # Loop through and download file if not already downloaded
+cnt=1
 while IFS= read -r URL
 do
-
+    echo --- $cnt --- st download
 	# Find the last part of the url using the / as delimiter
 	AFTER_SLASH=${URL##*/}
 
 	# Remove any additional query params in the filename by removing everything after ?
-	FILE_NAME=${AFTER_SLASH%%\?*}
+    #FILE_NAME=${AFTER_SLASH%%\?*}
 
-	DATE=$(date)
+    EXT=$(echo $URL |awk -F . '{if (NF>1) {print $NF}}')
+    FILE_NAME=$(curl -s $FEED | xpath '/rss/channel/item['$cnt']/title' 2>/dev/null | sed -n -e 's/.*<title>\(.*\)<\/title>.*/\1/p' )
+    FILE_NAME=$FILE_NAME'.'$EXT
+
+    DATE=$(date)
+    echo DATE : $DATE
 
 	# If file as already been downloaded ignore
 	if [ -f $FOLDER/$FILE_NAME ]; then
 		echo "Exsists $URL $FOLDER/$FILE_NAME $FILE_NAME $DATE"
 	else 
-		echo "Download $URL $FOLDER/$FILE_NAME $FILE_NAME $DATE"
-		curl -s -L $URL > $FOLDER/$FILE_NAME
+        echo URL : $URL
+        echo FOLDER : $FOLDER
+        echo FILE_NAME : $FILE_NAME
+        curl -s -L $URL > $FOLDER'/'$FILE_NAME
+        #echo "Download $URL $FOLDER/$FILE_NAME $FILE_NAME $DATE"
+        #curl -s -L $URL > $FOLDER/$FILE_NAME
 	fi 
-
+    cnt=$(($cnt+1))
 done <<< "$MEDIA"
 
 ENDTIME=`date +%s`
